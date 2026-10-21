@@ -1,0 +1,946 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World Quiz Game</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Baloo+2:wght@500;700;800&family=Share+Tech+Mono&display=swap">
+<style>
+/* Layout: a lit green "QUIZ GAME" sign on top (as in the lesson page), then one stage that switches between setup, play and podium.
+   Single dark stage by choice: a game-show floor with team colors taken from the book (orange, blue, yellow, violet). */
+:root{
+  --floor:#0b2a33; --panel:#12404d; --panel-2:#185264; --line:#2c6a7c;
+  --ink:#f3fbf6; --ink-dim:#aacdd3; --dark:#061a20;
+  --green:#1fa855; --green-deep:#0f6e37; --bulb:#ffe27a; --bulb-deep:#b38a00;
+  --ok:#27c26a; --bad:#e5484d;
+  --t1:#f47c20; --t2:#1fa7e6; --t3:#ffd23f; --t4:#a77bff;
+  --display:'Anton','Impact','Arial Narrow',sans-serif;
+  --body:'Baloo 2','Nunito','Segoe UI',system-ui,sans-serif;
+  --mono:'Share Tech Mono','Consolas','Courier New',monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{
+  margin:0; font-family:var(--body); font-size:17px; line-height:1.4; color:var(--ink);
+  background-color:var(--floor);
+  background-image:radial-gradient(900px 420px at 50% -8%, #17586c 0, transparent 70%);
+  background-repeat:no-repeat;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:20px 48px;
+}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #fff; outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:22px}
+
+/* ---------- sign ---------- */
+.sign{
+  background:radial-gradient(circle, var(--bulb) 0 3.5px, transparent 4.8px) center/22px 22px, var(--green-deep);
+  padding:11px; border-radius:24px;
+  box-shadow:0 8px 0 rgba(0,0,0,.28), 0 0 44px rgba(255,226,122,.12);
+  animation:glow 2.4s ease-in-out infinite alternate;
+}
+@keyframes glow{from{filter:brightness(.96)}to{filter:brightness(1.14)}}
+.sign-in{background:var(--green);border-radius:14px;padding:20px 18px 16px;text-align:center}
+.kicker{margin:0;font-weight:800;text-transform:uppercase;letter-spacing:.16em;font-size:14px;color:#e6ffee}
+h1{
+  margin:2px 0 0; font-family:var(--display); font-weight:400; text-transform:uppercase;
+  font-size:clamp(60px,15vw,138px); line-height:.95; letter-spacing:.01em; color:#fff;
+  text-shadow:0 5px 0 var(--green-deep); text-wrap:balance;
+}
+.sub{margin:8px 0 0;font-weight:700;color:#e6ffee}
+body.playing h1{font-size:clamp(34px,7vw,60px);text-shadow:0 3px 0 var(--green-deep)}
+body.playing .sub{display:none}
+body.playing .sign-in{padding:10px 14px}
+
+/* ---------- shared ---------- */
+.panel{background:var(--panel);border:2px solid var(--line);border-radius:18px;padding:18px;min-width:0}
+.eyebrow{margin:0;font-weight:800;text-transform:uppercase;letter-spacing:.12em;font-size:13px;color:var(--ink-dim)}
+.big{
+  font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.05em;text-transform:uppercase;
+  background:var(--bulb);color:#3a2c00;border:0;border-radius:16px;padding:14px 34px;cursor:pointer;
+  box-shadow:0 6px 0 var(--bulb-deep);transition:transform .08s, box-shadow .08s;
+}
+.big:hover{filter:brightness(1.06)}
+.big:active{transform:translateY(4px);box-shadow:0 2px 0 var(--bulb-deep)}
+.big.sm{font-size:22px;padding:10px 24px}
+.ghost{background:transparent;border:2px solid var(--line);border-radius:12px;padding:8px 14px;font-weight:700;cursor:pointer;color:var(--ink)}
+.ghost:hover{border-color:var(--bulb)}
+.ghost.sm{padding:5px 12px;font-size:15px}
+.ghost.danger{border-color:var(--bad);color:#ffb3b6}
+select{
+  background:var(--dark);border:2px solid var(--line);border-radius:12px;padding:9px 12px;font-weight:700;min-width:0;max-width:100%;
+}
+
+/* ---------- setup ---------- */
+.screen{display:grid;gap:18px}
+.setup-grid{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:820px){.setup-grid{grid-template-columns:minmax(0,1fr)}}
+.opts-panel{display:grid;gap:16px}
+.lbl{display:block;font-weight:800;margin-bottom:6px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{min-width:52px;padding:7px 14px;border-radius:12px;border:2px solid var(--line);background:transparent;font-weight:800;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--bulb);border-color:var(--bulb);color:#2a2200}
+.check{display:flex;gap:10px;align-items:flex-start;font-weight:700;cursor:pointer}
+.check input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--green);flex:none}
+.check small{display:block;font-weight:500;color:var(--ink-dim)}
+.teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:14px}
+.tsetup{background:var(--panel);border-radius:16px;border-top:8px solid var(--tc);padding:14px;display:grid;gap:10px;min-width:0}
+.tshead{display:flex;gap:10px;align-items:center}
+.tbadge{flex:none;width:38px;height:38px;border-radius:10px;background:var(--tc);color:#1b1300;font-family:var(--display);font-size:22px;display:grid;place-items:center}
+.tname,.addin{
+  min-width:0;flex:1;background:var(--dark);border:2px solid var(--line);border-radius:12px;padding:8px 12px;font-weight:700;
+}
+.tname{font-size:19px}
+.tname:focus,.addin:focus{border-color:var(--tc,var(--bulb));outline:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;min-height:36px;align-content:flex-start}
+.empty{color:var(--ink-dim);font-size:15px;align-self:center}
+.chip{display:inline-flex;align-items:stretch;border-radius:99px;background:var(--panel-2);border:2px solid var(--line);overflow:hidden;max-width:100%}
+.chip button{background:transparent;border:0;cursor:pointer;padding:3px 10px;font-weight:700;min-width:0;overflow-wrap:anywhere}
+.chip .chip-x{padding:3px 9px;color:var(--ink-dim);border-left:1px solid var(--line)}
+.chip.rep{background:var(--tc);border-color:var(--tc);color:#1b1300}
+.chip.rep .chip-x{color:#1b1300;border-left-color:rgba(0,0,0,.25)}
+.chip .tag{font-size:11px;font-weight:800;letter-spacing:.08em;margin-left:6px;background:#1b1300;color:var(--tc);padding:1px 6px;border-radius:99px}
+.addrow{display:flex;gap:8px}
+.add{flex:none;border:2px solid var(--tc);background:transparent;border-radius:12px;padding:6px 12px;font-weight:800;cursor:pointer}
+.add:hover{background:var(--tc);color:#1b1300}
+.mhint{margin:0;font-size:14px;color:var(--ink-dim)}
+.startrow{display:grid;gap:10px;justify-items:center}
+#setup-msg{margin:0;min-height:1.4em;color:#ffb3b6;font-weight:700;text-align:center}
+
+/* ---------- game ---------- */
+.topbar{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.progress{flex:1 1 220px;min-width:0;display:grid;gap:6px;font-weight:800}
+.pbar{height:10px;border-radius:99px;background:var(--dark);overflow:hidden}
+.pbar i{display:block;height:100%;width:0;background:var(--bulb);transition:width .4s}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tcard{
+  background:var(--panel);border-radius:14px;padding:10px 12px 12px;border-bottom:6px solid var(--tc);min-width:0;
+  display:grid;gap:4px;transition:transform .2s, box-shadow .2s;
+}
+.tcard.on{transform:translateY(-4px);box-shadow:0 0 0 3px var(--tc), 0 12px 26px rgba(0,0,0,.4)}
+.tn{font-weight:800;overflow-wrap:anywhere;line-height:1.15}
+.rp{font-size:14px;color:var(--ink-dim);overflow-wrap:anywhere}
+.rp b{color:var(--ink)}
+.score{
+  font-family:var(--mono);font-size:clamp(30px,6vw,44px);line-height:1.1;color:var(--bulb);background:var(--dark);
+  border-radius:8px;padding:2px 10px;text-align:right;font-variant-numeric:tabular-nums;letter-spacing:.05em;
+}
+.ll{display:flex}
+.ll-tag{font-size:12px;font-weight:800;letter-spacing:.06em;padding:1px 8px;border-radius:99px;border:2px solid var(--tc);color:var(--tc)}
+.ll-tag.used{text-decoration:line-through;opacity:.4}
+.stage{display:grid;gap:16px}
+.intro{text-align:center;display:grid;gap:10px;justify-items:center;border-top:8px solid var(--tc);padding-block:26px}
+.intro h2{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(44px,9vw,84px);line-height:1;color:var(--tc);overflow-wrap:anywhere;text-wrap:balance}
+.intro .who{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+.hint{margin:0;color:var(--ink-dim);font-size:15px;max-width:48ch}
+.qhead{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.pill{font-weight:800;text-transform:uppercase;letter-spacing:.08em;font-size:13px;border:2px solid var(--bulb);color:var(--bulb);padding:3px 12px;border-radius:99px}
+.qturn{font-weight:700;color:var(--ink-dim);overflow-wrap:anywhere}
+.qturn b{color:var(--tc)}
+.qtext{font-size:clamp(24px,4.6vw,40px);font-weight:800;line-height:1.18;margin:14px 0 16px;text-wrap:balance}
+.trow{display:flex;gap:12px;align-items:center}
+.timer{flex:1;height:14px;background:var(--dark);border-radius:99px;overflow:hidden}
+.timer i{display:block;height:100%;width:100%;background:var(--ok);transition:width .1s linear, background .3s}
+.timer.warn i{background:var(--t1)}
+.timer.urgent i{background:var(--bad)}
+.tnum{font-family:var(--mono);font-size:28px;min-width:2ch;text-align:right;font-variant-numeric:tabular-nums}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+@media(max-width:640px){.opts{grid-template-columns:1fr}}
+.opt{
+  display:flex;align-items:center;gap:12px;text-align:left;font-weight:700;font-size:clamp(18px,3.2vw,24px);line-height:1.2;
+  background:var(--panel-2);border:2px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;min-width:0;
+  transition:transform .12s, border-color .12s;
+}
+.opt .key{flex:none;width:38px;height:38px;border-radius:9px;background:var(--bulb);color:#3a2c00;font-family:var(--display);font-size:22px;display:grid;place-items:center}
+.opt .txt{min-width:0;overflow-wrap:anywhere}
+.opt:hover:not(:disabled){border-color:var(--bulb);transform:translateY(-2px)}
+.opt:disabled{cursor:default}
+.opt:disabled:not(.correct):not(.wrong){opacity:.55}
+.opt.correct{background:var(--ok);border-color:#fff;color:#04200f}
+.opt.wrong{background:var(--bad);border-color:#fff;color:#2a0507}
+.opt.gone{visibility:hidden}
+.qfoot{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
+.qcard.stealing{border-color:var(--t1)}
+.steal{text-align:center;display:grid;gap:12px;justify-items:center;border-color:var(--t1)}
+.steal h3,.fb h3{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(28px,5vw,42px);letter-spacing:.02em}
+.steal p{margin:0}
+.stealteams{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.teambtn{background:var(--tc);color:#1b1300;border:0;border-radius:14px;padding:10px 20px;font-weight:800;font-size:19px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.35);overflow-wrap:anywhere}
+.teambtn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.fb{display:grid;gap:8px}
+.fb.good{border-color:var(--ok)}
+.fb.good h3{color:var(--ok)}
+.fb.bad{border-color:var(--bad)}
+.fb.bad h3{color:#ff8e92}
+.fb p{margin:0}
+.fb .exp{background:var(--dark);border-radius:12px;padding:10px 14px;color:var(--ink)}
+.fb .exp b{color:var(--bulb)}
+.fb .nextrow{display:flex;justify-content:flex-end;margin-top:6px}
+
+/* ---------- results ---------- */
+.res{text-align:center}
+.res h2{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(40px,8vw,76px);line-height:1;color:var(--bulb);text-wrap:balance;overflow-wrap:anywhere}
+.res .lead{margin:6px 0 0;font-weight:700;color:var(--ink-dim)}
+.podium{display:flex;gap:12px;align-items:flex-end;justify-content:center;margin:26px 0 8px}
+.pcol{flex:1 1 0;max-width:200px;min-width:0}
+.pname{font-weight:800;overflow-wrap:anywhere;line-height:1.15}
+.pscore{font-family:var(--mono);font-size:28px;color:var(--bulb);font-variant-numeric:tabular-nums}
+.pblock{
+  margin-top:8px;height:0;border-radius:12px 12px 0 0;background:var(--tc);color:#1b1300;overflow:hidden;
+  font-family:var(--display);font-size:46px;padding-top:8px;transition:height .9s cubic-bezier(.2,.8,.2,1);
+}
+.tablewrap{overflow-x:auto;margin-top:18px;text-align:left}
+table{border-collapse:collapse;width:100%;min-width:420px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left}
+th{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--tc);margin-right:8px}
+.resbtns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+
+/* ---------- chart dialog ---------- */
+dialog{
+  background:var(--panel);color:var(--ink);border:2px solid var(--line);border-radius:18px;padding:20px;
+  width:min(620px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;
+}
+dialog::backdrop{background:rgba(3,15,20,.75)}
+dialog h2{margin:0 0 10px;font-family:var(--display);font-weight:400;font-size:34px;color:var(--bulb)}
+dialog table{min-width:0}
+dialog td:first-child{font-weight:800}
+.rules{display:grid;gap:8px;margin:14px 0}
+.rules p{margin:0;background:var(--dark);border-radius:12px;padding:8px 12px}
+.rules b{color:var(--bulb)}
+
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
+
+@media(prefers-reduced-motion:reduce){
+  .sign{animation:none}
+  *,*::before,*::after{transition-duration:.01ms!important}
+}
+</style>
+
+<div class="wrap">
+  <header class="sign">
+    <div class="sign-in">
+      <p class="kicker">Unit 7 · Lesson 3</p>
+      <h1>Quiz Game</h1>
+      <p class="sub">World quiz: adjectives, comparatives and superlatives</p>
+    </div>
+  </header>
+
+  <main>
+    <!-- SETUP -->
+    <section id="screen-setup" class="screen">
+      <div class="setup-grid">
+        <div class="panel opts-panel">
+          <div>
+            <span class="lbl" id="l-n">Quantos times?</span>
+            <div class="seg" role="group" aria-labelledby="l-n" data-key="n">
+              <button type="button" data-v="2">2</button><button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
+            </div>
+          </div>
+          <div>
+            <span class="lbl" id="l-r">Quantas perguntas?</span>
+            <div class="seg" role="group" aria-labelledby="l-r" data-key="rounds">
+              <button type="button" data-v="10">10</button><button type="button" data-v="15">15</button><button type="button" data-v="20">20</button>
+            </div>
+          </div>
+          <div>
+            <span class="lbl" id="l-s">Tempo para responder</span>
+            <div class="seg" role="group" aria-labelledby="l-s" data-key="secs">
+              <button type="button" data-v="15">15 s</button><button type="button" data-v="20">20 s</button><button type="button" data-v="30">30 s</button>
+            </div>
+          </div>
+          <label class="check" for="steal">
+            <input type="checkbox" id="steal">
+            <span>Roubo de pontos<small>Se um time errar, outro pode tentar por 50 pontos.</small></span>
+          </label>
+          <button type="button" id="btn-chart" class="ghost">Ver a tabela da lição</button>
+        </div>
+        <div id="teams" class="teams"></div>
+      </div>
+      <div class="startrow">
+        <p id="setup-msg" role="alert"></p>
+        <button type="button" id="btn-start" class="big">Começar o jogo</button>
+      </div>
+    </section>
+
+    <!-- GAME -->
+    <section id="screen-game" class="screen" hidden>
+      <div class="topbar">
+        <div class="progress">
+          <span id="g-count">Pergunta 1 de 10</span>
+          <div class="pbar"><i id="g-pfill"></i></div>
+        </div>
+        <div class="tools">
+          <button type="button" id="btn-mute" class="ghost sm" aria-pressed="false">Som: ligado</button>
+          <button type="button" id="btn-quit" class="ghost sm">Encerrar jogo</button>
+        </div>
+      </div>
+
+      <div id="board" class="board"></div>
+
+      <div class="stage">
+        <div id="intro" class="panel intro">
+          <p class="eyebrow">Vez do time</p>
+          <h2 id="intro-team"></h2>
+          <p class="eyebrow">Categoria: <span id="intro-cat"></span></p>
+          <div class="who">
+            <label for="intro-rep" class="lbl" style="margin:0">Quem responde?</label>
+            <select id="intro-rep"></select>
+          </div>
+          <button type="button" id="btn-show" class="big">Mostrar pergunta</button>
+          <p class="hint">O representante vai à frente. O relógio só começa quando a pergunta aparece.</p>
+        </div>
+
+        <div id="qcard" class="panel qcard" hidden>
+          <div class="qhead">
+            <span class="pill" id="q-cat"></span>
+            <span class="qturn" id="q-turn"></span>
+          </div>
+          <p class="qtext" id="q-text"></p>
+          <div class="trow">
+            <div class="timer" id="timer" role="timer"><i id="timer-fill"></i></div>
+            <span class="tnum" id="timer-num">20</span>
+          </div>
+          <div class="opts" id="opts"></div>
+          <div class="qfoot">
+            <button type="button" id="btn-5050" class="ghost">Usar 50/50</button>
+            <span class="hint">Atalhos: A, B, C, D ou 1 a 4</span>
+          </div>
+        </div>
+
+        <div id="panel-steal" class="panel steal" hidden>
+          <h3 id="steal-title"></h3>
+          <div id="steal-pick" style="display:grid;gap:12px;justify-items:center">
+            <p id="steal-sub"></p>
+            <div id="steal-teams" class="stealteams"></div>
+            <button type="button" id="btn-nosteal" class="ghost">Ninguém quer, mostrar a resposta</button>
+          </div>
+          <div id="steal-ready" hidden style="display:grid;gap:12px;justify-items:center">
+            <p id="steal-who"></p>
+            <div class="stealteams" style="align-items:center">
+              <label for="steal-rep" class="lbl" style="margin:0">Quem responde?</label>
+              <select id="steal-rep"></select>
+            </div>
+            <button type="button" id="btn-stealgo" class="big sm">Valendo! 10 s</button>
+          </div>
+        </div>
+
+        <div id="feedback" class="panel fb" hidden aria-live="polite">
+          <h3 id="fb-title"></h3>
+          <p id="fb-sub"></p>
+          <p class="exp" id="fb-exp"></p>
+          <div class="nextrow"><button type="button" id="btn-next" class="big sm">Próxima pergunta</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="screen-results" class="screen" hidden>
+      <div class="panel res">
+        <p class="eyebrow">Fim de jogo</p>
+        <h2 id="res-title"></h2>
+        <p class="lead" id="res-lead"></p>
+        <div class="podium" id="podium"></div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Time</th><th class="num">Pontos</th><th class="num">Acertos</th><th class="num">Roubos</th></tr></thead>
+            <tbody id="res-rows"></tbody>
+          </table>
+        </div>
+        <div class="resbtns">
+          <button type="button" id="btn-again" class="big sm">Jogar de novo</button>
+          <button type="button" id="btn-reset" class="ghost">Mudar os times</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="chart" aria-labelledby="chart-h">
+  <h2 id="chart-h">Tabela da lição</h2>
+  <table>
+    <thead><tr><th>adjective</th><th>comparative</th><th>superlative</th></tr></thead>
+    <tbody>
+      <tr><td>big</td><td>bigger</td><td>the biggest</td></tr>
+      <tr><td>old</td><td>older</td><td>the oldest</td></tr>
+      <tr><td>tall</td><td>taller</td><td>the tallest</td></tr>
+      <tr><td>hot</td><td>hotter</td><td>the hottest</td></tr>
+      <tr><td>small</td><td>smaller</td><td>the smallest</td></tr>
+      <tr><td>beautiful</td><td>more beautiful</td><td>the most beautiful</td></tr>
+      <tr><td>dangerous</td><td>more dangerous</td><td>the most dangerous</td></tr>
+    </tbody>
+  </table>
+  <div class="rules">
+    <p><b>Adjetivo curto:</b> adjective + <b>-er</b> than / the adjective + <b>-est</b>. Em big e hot, dobra a última letra.</p>
+    <p><b>Adjetivo longo:</b> <b>more</b> + adjective + than / <b>the most</b> + adjective.</p>
+    <p>Para comparar <b>duas</b> coisas, use <b>than</b>. Antes do superlativo, use <b>the</b>.</p>
+  </div>
+  <button type="button" id="chart-close" class="ghost">Fechar</button>
+</dialog>
+
+<canvas id="confetti" hidden></canvas>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const clone = o => JSON.parse(JSON.stringify(o));
+const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= QUESTIONS ================= */
+const CATS = { conv: 'Conversation', vocab: 'Vocabulary', sup: 'Superlatives', comp: 'Comparatives', world: 'World Quiz' };
+const q = (c, text, a, w, e) => ({ c, q: text, a, w, e });
+const Q = [
+  // Conversation (DiscoverOn quiz day)
+  q('conv', 'In the quiz, what is the oldest city in the world?', 'Damascus', ['Athens', 'Brasilia', 'Paris'], 'Na conversa, a Teacher pergunta qual é a cidade mais antiga do mundo. Kate responde A: Damascus, na Síria.'),
+  q('conv', 'What is the biggest animal in the world?', 'The Blue Whale', ['The elephant', 'The polar bear', 'The giraffe'], 'Sophia pensa e acerta: a baleia-azul (the Blue Whale) é o maior animal do mundo.'),
+  q('conv', 'What is the smallest planet in the world?', 'Mercury', ['Earth', 'Uranus', 'Mars'], 'Juan grita: It’s Mercury! Mercúrio é o menor planeta.'),
+  q('conv', 'Who answers the question about the oldest city?', 'Kate', ['Sophia', 'Juan', 'John'], 'Kate diz: I know! It’s A. Damascus is the oldest city in the world!'),
+  q('conv', 'Who answers the question about the smallest planet?', 'Juan', ['Kate', 'Sophia', 'John'], 'Juan responde: Me! Me! Me! It’s Mercury!'),
+  q('conv', 'Who thinks the answer is the Blue Whale?', 'Sophia', ['Kate', 'Juan', 'John'], 'Sophia diz: I think I know… Is it the Blue Whale?'),
+  q('conv', 'Which country is Damascus in?', 'Syria', ['Greece', 'Brazil', 'Italy'], 'Damascus fica na Síria (Syria). Athens fica na Grécia e Brasilia, no Brasil.'),
+  q('conv', 'Complete: Damascus is the ____ city in the world.', 'oldest', ['older', 'most old', 'oldiest'], 'old é curto, então: old → older → the oldest.'),
+  q('conv', 'Complete: The Blue Whale is the ____ animal.', 'biggest', ['bigger', 'most big', 'bigest'], 'big dobra o g: big → bigger → the biggest.'),
+  q('conv', 'Complete: Mercury is the ____ planet.', 'smallest', ['smaller', 'most small', 'smalest'], 'small → smaller → the smallest.'),
+  q('conv', 'What is the last question of the quiz about?', 'The smallest planet', ['The oldest city', 'The biggest animal', 'The hottest place'], 'A Teacher avisa: this is the last question. What’s the smallest planet in the world?'),
+
+  // Vocabulary: the chart
+  q('vocab', 'What is the superlative of “big”?', 'the biggest', ['the bigest', 'the most big', 'the bigger'], 'big → bigger → the biggest. Dobra o g antes de -est.'),
+  q('vocab', 'What is the superlative of “hot”?', 'the hottest', ['the hotest', 'the most hot', 'the hotter'], 'hot → hotter → the hottest. Dobra o t.'),
+  q('vocab', 'What is the superlative of “beautiful”?', 'the most beautiful', ['the beautifulest', 'the more beautiful', 'the beautifullest'], 'Adjetivo longo usa the most: the most beautiful.'),
+  q('vocab', 'What is the superlative of “dangerous”?', 'the most dangerous', ['the dangerousest', 'the more dangerous', 'the dangerest'], 'dangerous é longo: the most dangerous.'),
+  q('vocab', 'What is the superlative of “old”?', 'the oldest', ['the olddest', 'the most old', 'the older'], 'old → older → the oldest.'),
+  q('vocab', 'What is the superlative of “tall”?', 'the tallest', ['the talest', 'the most tall', 'the taller'], 'tall → taller → the tallest.'),
+  q('vocab', 'What is the superlative of “small”?', 'the smallest', ['the smalest', 'the most small', 'the smaller'], 'small → smaller → the smallest.'),
+  q('vocab', 'What is the comparative of “big”?', 'bigger', ['biger', 'more big', 'biggest'], 'big → bigger. O g é dobrado.'),
+  q('vocab', 'What is the comparative of “old”?', 'older', ['more old', 'oldder', 'oldest'], 'old → older. Basta somar -er.'),
+  q('vocab', 'What is the comparative of “tall”?', 'taller', ['more tall', 'tallest', 'tal'], 'tall → taller.'),
+  q('vocab', 'What is the comparative of “hot”?', 'hotter', ['hoter', 'more hot', 'hottest'], 'hot → hotter. O t é dobrado.'),
+  q('vocab', 'What is the comparative of “small”?', 'smaller', ['more small', 'smalest', 'smallest'], 'small → smaller.'),
+  q('vocab', 'What is the comparative of “beautiful”?', 'more beautiful', ['beautifuler', 'most beautiful', 'beautifuller'], 'Adjetivo longo usa more: more beautiful.'),
+  q('vocab', 'What is the comparative of “dangerous”?', 'more dangerous', ['dangerouser', 'most dangerous', 'the more dangerous'], 'dangerous é longo: more dangerous.'),
+
+  // Superlatives
+  q('sup', 'Jupiter is ____ planet in the Solar System.', 'the biggest', ['bigger', 'the most big', 'big'], 'Superlativo: the biggest. Júpiter é o maior planeta do Sistema Solar.'),
+  q('sup', 'Death Valley, in California, is ____ place in the world.', 'the hottest', ['hotter', 'the most hot', 'the hotest'], 'hot → the hottest. Death Valley, na Califórnia, tem a maior temperatura já registrada.'),
+  q('sup', 'Antarctica is ____ area on Earth.', 'the coldest', ['colder', 'the most cold', 'the colder'], 'cold → the coldest. A Antártica é a região mais fria da Terra.'),
+  q('sup', 'Mosquitoes are ____ animals, because they spread diseases.', 'the most dangerous', ['more dangerous', 'the dangerousest', 'most dangerous'], 'dangerous é longo: the most dangerous.'),
+  q('sup', 'Which word comes before a superlative?', 'the', ['than', 'a', 'then'], 'O superlativo sempre vem com the: the biggest, the most beautiful.'),
+  q('sup', 'Which sentence is correct?', 'Mercury is the smallest planet.', ['Mercury is the most small planet.', 'Mercury is smallest planet.', 'Mercury is the smaller planet.'], 'small é curto, então the smallest. E não esqueça o the.'),
+  q('sup', 'Which ending do short adjectives take in the superlative?', '-est', ['-er', '-ing', '-ly'], 'Adjetivo curto: the + adjetivo + -est (the tallest).'),
+  q('sup', 'How do long adjectives form the superlative?', 'the most + adjective', ['the + adjective + -est', 'more + adjective', 'the more + adjective'], 'Adjetivos longos: the most beautiful, the most dangerous.'),
+  q('sup', 'What is the opposite of “the tallest”?', 'the shortest', ['the smallest', 'the oldest', 'the biggest'], 'tallest = mais alto; shortest = mais baixo.'),
+
+  // Comparatives
+  q('comp', 'An elephant is ____ than a mouse.', 'bigger', ['biggest', 'more big', 'the bigger'], 'Comparamos duas coisas: bigger than.'),
+  q('comp', 'Mercury is ____ than Earth.', 'smaller', ['smallest', 'more small', 'the smaller'], 'small → smaller. Mercúrio é menor que a Terra.'),
+  q('comp', 'Jupiter is ____ than Mars.', 'bigger', ['biggest', 'more big', 'big'], 'Dois planetas, então comparativo: bigger than.'),
+  q('comp', 'A lion is ____ than a rabbit.', 'more dangerous', ['dangerouser', 'most dangerous', 'the more dangerous'], 'dangerous é longo: more dangerous than.'),
+  q('comp', 'Which word do we use to compare two things?', 'than', ['then', 'the', 'that'], 'Usamos than: bigger than, more beautiful than.'),
+  q('comp', 'Summer is ____ than winter.', 'hotter', ['hoter', 'more hot', 'hottest'], 'hot → hotter. Dobra o t.'),
+  q('comp', 'Which comparative is correct?', 'more beautiful', ['beautifuller', 'most beautiful', 'beautifulest'], 'beautiful é longo, então usamos more.'),
+  q('comp', 'A cheetah is ____ than a turtle.', 'faster', ['more fast', 'fastest', 'fasting'], 'fast é curto: fast → faster.'),
+  q('comp', 'Which adjective doubles its last letter in the comparative?', 'hot → hotter', ['old → older', 'tall → taller', 'small → smaller'], 'hot termina em consoante + vogal + consoante, por isso dobra o t.'),
+
+  // World quiz
+  q('world', 'What is the tallest animal in the world?', 'The giraffe', ['The elephant', 'The Blue Whale', 'The ostrich'], 'A girafa é the tallest animal do mundo.'),
+  q('world', 'What is the biggest ocean on Earth?', 'The Pacific Ocean', ['The Atlantic Ocean', 'The Indian Ocean', 'The Arctic Ocean'], 'O Pacífico é the biggest ocean.'),
+  q('world', 'What is the tallest mountain above sea level?', 'Mount Everest', ['K2', 'Mont Blanc', 'Aconcagua'], 'O Everest é a montanha mais alta acima do nível do mar.'),
+  q('world', 'What is the fastest land animal?', 'The cheetah', ['The lion', 'The horse', 'The elephant'], 'O guepardo (cheetah) é the fastest land animal.'),
+  q('world', 'What is the coldest continent?', 'Antarctica', ['Asia', 'Europe', 'Africa'], 'Antarctica is the coldest continent.'),
+  q('world', 'What is the hottest planet in the Solar System?', 'Venus', ['Mercury', 'Mars', 'Jupiter'], 'Vênus é mais quente que Mercúrio por causa da atmosfera densa. Venus is the hottest planet.'),
+  q('world', 'What is the biggest planet in the Solar System?', 'Jupiter', ['Saturn', 'Earth', 'Neptune'], 'Jupiter is the biggest planet.'),
+  q('world', 'What is the biggest land animal?', 'The elephant', ['The Blue Whale', 'The polar bear', 'The giraffe'], 'The Blue Whale é maior, mas vive no mar. The elephant é the biggest land animal.'),
+  q('world', 'What is the smallest country in the world?', 'Vatican City', ['Monaco', 'Malta', 'Brazil'], 'Vatican City is the smallest country in the world.'),
+  q('world', 'What is the biggest country in the world, by area?', 'Russia', ['China', 'Brazil', 'Canada'], 'Russia is the biggest country by area.'),
+  q('world', 'Which planet is the closest to the Sun?', 'Mercury', ['Venus', 'Earth', 'Mars'], 'close → the closest. Mercury is the closest planet to the Sun.'),
+  q('world', 'What is the biggest bird in the world?', 'The ostrich', ['The eagle', 'The penguin', 'The parrot'], 'O avestruz (ostrich) é the biggest bird.')
+];
+
+function pickQuestions(n) {
+  const byCat = {};
+  Object.keys(CATS).forEach(k => byCat[k] = shuffle(Q.filter(x => x.c === k)));
+  const out = [];
+  while (out.length < n) {
+    const order = shuffle(Object.keys(CATS));
+    let added = false;
+    for (const k of order) {
+      if (out.length >= n) break;
+      if (byCat[k].length) { out.push(byCat[k].pop()); added = true; }
+    }
+    if (!added) break;
+  }
+  return out;
+}
+
+/* ================= SOUND ================= */
+let AC = null, muted = false;
+function tone(f, d, type = 'sine', at = 0, v = 0.12) {
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.value = f;
+    const t0 = AC.currentTime + at;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(v, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    o.connect(g); g.connect(AC.destination);
+    o.start(t0); o.stop(t0 + d + 0.05);
+  } catch (e) {}
+}
+function sfx(k) {
+  if (muted) return;
+  if (k === 'ok') [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'triangle', i * 0.09));
+  else if (k === 'bad') { tone(220, 0.28, 'sawtooth', 0, 0.09); tone(165, 0.4, 'sawtooth', 0.18, 0.09); }
+  else if (k === 'tick') tone(900, 0.06, 'square', 0, 0.04);
+  else if (k === 'go') tone(660, 0.12, 'triangle');
+  else if (k === 'win') [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, 0.2, 'triangle', i * 0.12));
+}
+
+/* ================= SETUP ================= */
+const DEFAULTS = {
+  n: 2, rounds: 10, secs: 20, steal: true,
+  teams: [
+    { name: 'Blue Whales', members: [], rep: 0 },
+    { name: 'Mighty Mercury', members: [], rep: 0 },
+    { name: 'Giant Giraffes', members: [], rep: 0 },
+    { name: 'Hot Cheetahs', members: [], rep: 0 }
+  ]
+};
+function loadCfg() {
+  const base = clone(DEFAULTS);
+  try {
+    const s = JSON.parse(localStorage.getItem('wqg-cfg'));
+    if (s && Array.isArray(s.teams) && s.teams.length === 4) {
+      base.n = [2, 3, 4].includes(s.n) ? s.n : base.n;
+      base.rounds = [10, 15, 20].includes(s.rounds) ? s.rounds : base.rounds;
+      base.secs = [15, 20, 30].includes(s.secs) ? s.secs : base.secs;
+      base.steal = s.steal !== false;
+      base.teams = s.teams.map((t, i) => {
+        const members = Array.isArray(t.members) ? t.members.filter(m => typeof m === 'string').slice(0, 12) : [];
+        return {
+          name: typeof t.name === 'string' && t.name.trim() ? t.name.slice(0, 22) : DEFAULTS.teams[i].name,
+          members,
+          rep: Number.isInteger(t.rep) && t.rep >= 0 && t.rep < members.length ? t.rep : 0
+        };
+      });
+    }
+  } catch (e) {}
+  return base;
+}
+function saveCfg() { try { localStorage.setItem('wqg-cfg', JSON.stringify(cfg)); } catch (e) {} }
+let cfg = loadCfg();
+let G = null;
+
+function syncSeg() {
+  $$('.seg').forEach(seg => {
+    const key = seg.dataset.key;
+    $$('button', seg).forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === cfg[key])));
+  });
+  $('#steal').checked = cfg.steal;
+}
+function renderChips(i) {
+  const t = cfg.teams[i], box = $('#chips' + i);
+  if (!box) return;
+  box.textContent = '';
+  if (!t.members.length) {
+    const s = document.createElement('span'); s.className = 'empty'; s.textContent = 'Nenhum aluno ainda'; box.append(s); return;
+  }
+  t.members.forEach((m, k) => {
+    const chip = document.createElement('span'); chip.className = 'chip' + (k === t.rep ? ' rep' : '');
+    const pick = document.createElement('button'); pick.type = 'button'; pick.className = 'chip-pick';
+    pick.dataset.i = i; pick.dataset.m = k; pick.textContent = m;
+    pick.setAttribute('aria-pressed', String(k === t.rep));
+    pick.title = 'Escolher ' + m + ' como representante';
+    if (k === t.rep) { const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'REP'; pick.append(tag); }
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'chip-x';
+    x.dataset.i = i; x.dataset.m = k; x.textContent = '×'; x.setAttribute('aria-label', 'Remover ' + m);
+    chip.append(pick, x); box.append(chip);
+  });
+}
+function renderTeams() {
+  const box = $('#teams'); box.textContent = '';
+  for (let i = 0; i < cfg.n; i++) {
+    const t = cfg.teams[i];
+    const card = document.createElement('div'); card.className = 'tsetup'; card.style.setProperty('--tc', 'var(--t' + (i + 1) + ')');
+    card.innerHTML =
+      '<div class="tshead"><span class="tbadge">' + (i + 1) + '</span>' +
+      '<label class="sr" for="tn' + i + '">Nome do time ' + (i + 1) + '</label>' +
+      '<input id="tn' + i + '" class="tname" maxlength="22" data-i="' + i + '" autocomplete="off" value="' + esc(t.name) + '"></div>' +
+      '<div class="chips" id="chips' + i + '"></div>' +
+      '<div class="addrow"><label class="sr" for="ad' + i + '">Adicionar aluno ao time ' + (i + 1) + '</label>' +
+      '<input id="ad' + i + '" class="addin" maxlength="60" data-i="' + i + '" placeholder="Nome do aluno" autocomplete="off">' +
+      '<button type="button" class="add" data-i="' + i + '">Adicionar</button></div>' +
+      '<p class="mhint">Toque em um nome para escolher o representante.</p>';
+    box.append(card); renderChips(i);
+  }
+}
+function addMembers(i) {
+  const inp = $('#ad' + i), t = cfg.teams[i];
+  const names = inp.value.split(/[,;\n]/).map(s => s.trim().slice(0, 24)).filter(Boolean);
+  names.forEach(n => {
+    if (t.members.length >= 12) return;
+    if (t.members.some(m => m.toLowerCase() === n.toLowerCase())) return;
+    t.members.push(n);
+  });
+  inp.value = ''; renderChips(i); inp.focus();
+}
+$$('.seg').forEach(seg => seg.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const key = seg.dataset.key; cfg[key] = Number(b.dataset.v); syncSeg();
+  if (key === 'n') renderTeams();
+}));
+$('#steal').addEventListener('change', e => { cfg.steal = e.target.checked; });
+const teamsBox = $('#teams');
+teamsBox.addEventListener('input', e => { if (e.target.classList.contains('tname')) cfg.teams[Number(e.target.dataset.i)].name = e.target.value; });
+teamsBox.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('addin')) { e.preventDefault(); addMembers(Number(e.target.dataset.i)); } });
+teamsBox.addEventListener('click', e => {
+  const add = e.target.closest('.add');
+  if (add) { addMembers(Number(add.dataset.i)); return; }
+  const pick = e.target.closest('.chip-pick');
+  if (pick) { const i = Number(pick.dataset.i); cfg.teams[i].rep = Number(pick.dataset.m); renderChips(i); return; }
+  const x = e.target.closest('.chip-x');
+  if (x) {
+    const i = Number(x.dataset.i), m = Number(x.dataset.m), t = cfg.teams[i];
+    t.members.splice(m, 1);
+    if (t.rep === m) t.rep = 0; else if (t.rep > m) t.rep--;
+    renderChips(i);
+  }
+});
+$('#btn-chart').addEventListener('click', () => { const d = $('#chart'); if (d.showModal) d.showModal(); else d.setAttribute('open', ''); });
+$('#chart-close').addEventListener('click', () => { const d = $('#chart'); if (d.close) d.close(); else d.removeAttribute('open'); });
+
+function show(name) {
+  ['setup', 'game', 'results'].forEach(n => { $('#screen-' + n).hidden = n !== name; });
+  document.body.classList.toggle('playing', name === 'game');
+  window.scrollTo(0, 0);
+}
+
+$('#btn-start').addEventListener('click', () => {
+  const msg = $('#setup-msg'); msg.textContent = '';
+  const seen = new Set();
+  for (let i = 0; i < cfg.n; i++) {
+    const t = cfg.teams[i];
+    t.name = (t.name || '').trim() || DEFAULTS.teams[i].name;
+    let nm = t.name, c = 2;
+    while (seen.has(nm.toLowerCase())) nm = t.name + ' ' + (c++);
+    t.name = nm.slice(0, 22); seen.add(t.name.toLowerCase());
+    if (!t.members.length) { msg.textContent = 'O time “' + t.name + '” precisa de pelo menos um aluno.'; $('#ad' + i).focus(); return; }
+  }
+  renderTeams();
+  saveCfg(); newGame();
+});
+
+/* ================= GAME ================= */
+function newGame() {
+  const n = cfg.n;
+  G = {
+    teams: cfg.teams.slice(0, n).map((t, i) => ({
+      name: t.name, members: t.members.slice(), rep: t.rep, color: i + 1,
+      score: 0, shown: 0, lifeline: true, correct: 0, steals: 0
+    })),
+    qs: pickQuestions(cfg.rounds), i: 0, secs: cfg.secs, steal: cfg.steal,
+    phase: '', turn: 0, opts: [], pickedWrong: new Set(), stealTeam: null, used5050: false, t: null
+  };
+  show('game'); buildBoard(); showTurn();
+}
+function buildBoard() {
+  const b = $('#board'); b.textContent = '';
+  G.teams.forEach((t, i) => {
+    const c = document.createElement('div'); c.className = 'tcard'; c.id = 'tc' + i; c.style.setProperty('--tc', 'var(--t' + t.color + ')');
+    c.innerHTML = '<div class="tn">' + esc(t.name) + '</div><div class="rp">Rep.: <b></b></div><div class="score" aria-label="Pontos">0</div><div class="ll"><span class="ll-tag">50/50</span></div>';
+    b.append(c);
+  });
+}
+function tween(t, node) {
+  const from = t.shown, to = t.score, start = performance.now(), d = reduceMotion ? 0 : 700;
+  t.shown = to;
+  const step = now => {
+    const p = d ? Math.min(1, (now - start) / d) : 1;
+    node.textContent = Math.round(from + (to - from) * p);
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+function updateBoard() {
+  if (!G) return;
+  G.teams.forEach((t, i) => {
+    const c = $('#tc' + i); if (!c) return;
+    const stealing = G.phase === 'steal-ready' || G.phase === 'steal-play';
+    c.classList.toggle('on', stealing ? i === G.stealTeam : i === G.turn);
+    $('.rp b', c).textContent = t.members[t.rep] || '-';
+    $('.ll-tag', c).classList.toggle('used', !t.lifeline);
+    if (t.shown !== t.score) tween(t, $('.score', c));
+  });
+}
+function fillRep(sel, i) {
+  const t = G.teams[i];
+  sel.textContent = ''; sel.dataset.team = i;
+  t.members.forEach((m, k) => { const o = document.createElement('option'); o.value = k; o.textContent = m; sel.append(o); });
+  sel.value = String(t.rep);
+}
+['#intro-rep', '#steal-rep'].forEach(id => $(id).addEventListener('change', e => {
+  G.teams[Number(e.target.dataset.team)].rep = Number(e.target.value); updateBoard();
+}));
+
+function startTimer(total, onEnd) {
+  stopTimer();
+  const t = { total, start: performance.now(), left: total, lastSec: Math.ceil(total), id: null };
+  G.t = t;
+  const tm = $('#timer'); tm.className = 'timer';
+  $('#timer-fill').style.width = '100%'; $('#timer-num').textContent = total;
+  t.id = setInterval(() => {
+    const left = Math.max(0, total - (performance.now() - t.start) / 1000);
+    t.left = left;
+    $('#timer-fill').style.width = (left / total * 100) + '%';
+    const sec = Math.ceil(left);
+    $('#timer-num').textContent = sec;
+    tm.classList.toggle('urgent', left <= 5);
+    tm.classList.toggle('warn', left > 5 && left <= total * 0.5);
+    if (sec !== t.lastSec) { t.lastSec = sec; if (sec <= 5 && sec > 0) sfx('tick'); }
+    if (left <= 0) { stopTimer(); onEnd(); }
+  }, 100);
+}
+function stopTimer() { if (G && G.t && G.t.id) { clearInterval(G.t.id); G.t.id = null; } }
+
+function showTurn() {
+  stopTimer();
+  G.phase = 'intro'; G.pickedWrong = new Set(); G.stealTeam = null; G.used5050 = false;
+  G.turn = G.i % G.teams.length;
+  const qn = G.qs[G.i], t = G.teams[G.turn];
+  $('#g-count').textContent = 'Pergunta ' + (G.i + 1) + ' de ' + G.qs.length;
+  $('#g-pfill').style.width = (G.i / G.qs.length * 100) + '%';
+  $('#qcard').hidden = true; $('#qcard').classList.remove('stealing');
+  $('#panel-steal').hidden = true; $('#feedback').hidden = true;
+  const intro = $('#intro'); intro.hidden = false; intro.style.setProperty('--tc', 'var(--t' + t.color + ')');
+  $('#intro-team').textContent = t.name; $('#intro-cat').textContent = CATS[qn.c];
+  fillRep($('#intro-rep'), G.turn);
+  updateBoard();
+}
+function showQuestion() {
+  const qn = G.qs[G.i], t = G.teams[G.turn];
+  G.phase = 'question';
+  G.opts = shuffle([{ t: qn.a, ok: true }].concat(qn.w.map(x => ({ t: x, ok: false }))));
+  $('#intro').hidden = true;
+  const card = $('#qcard'); card.hidden = false; card.style.setProperty('--tc', 'var(--t' + t.color + ')');
+  $('#q-cat').textContent = CATS[qn.c];
+  $('#q-turn').innerHTML = '<b>' + esc(t.name) + '</b> · responde ' + esc(t.members[t.rep]);
+  $('#q-text').textContent = qn.q;
+  const box = $('#opts'); box.textContent = '';
+  G.opts.forEach((o, k) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'opt'; b.dataset.k = k;
+    b.innerHTML = '<span class="key">' + 'ABCD'[k] + '</span><span class="txt">' + esc(o.t) + '</span>';
+    box.append(b);
+  });
+  $('#btn-5050').hidden = !t.lifeline || G.teams.length < 1;
+  updateBoard();
+  startTimer(G.secs, onTimeout);
+}
+function lockOpts() { $$('.opt').forEach(b => { b.disabled = true; }); }
+function award(team, pts) { team.score += pts; updateBoard(); }
+
+function answer(k) {
+  const pick = G.opts[k], btn = $$('.opt')[k];
+  if (G.phase === 'question') {
+    const left = G.t.left; stopTimer(); lockOpts();
+    const team = G.teams[G.turn];
+    if (pick.ok) {
+      const pts = 100 + Math.round(50 * left / G.secs);
+      award(team, pts); team.correct++; btn.classList.add('correct'); sfx('ok');
+      reveal({ ok: true, team: G.turn, pts });
+    } else {
+      btn.classList.add('wrong'); G.pickedWrong.add(k); afterWrong('wrong');
+    }
+  } else if (G.phase === 'steal-play') {
+    stopTimer(); lockOpts();
+    const team = G.teams[G.stealTeam];
+    if (pick.ok) {
+      award(team, 50); team.correct++; team.steals++; btn.classList.add('correct'); sfx('ok');
+      reveal({ ok: true, team: G.stealTeam, pts: 50, steal: true });
+    } else {
+      btn.classList.add('wrong'); sfx('bad'); reveal({ ok: false, steal: true });
+    }
+  }
+}
+function onTimeout() { lockOpts(); afterWrong('time'); }
+function afterWrong(kind) {
+  sfx('bad');
+  const canSteal = G.steal && G.teams.length > 1 && !G.used5050;
+  if (canSteal) stealPick(kind); else reveal({ ok: false, kind });
+}
+function stealPick(kind) {
+  G.phase = 'steal-pick'; updateBoard();
+  $('#panel-steal').hidden = false;
+  $('#steal-title').textContent = kind === 'time' ? 'Tempo esgotado! Alguém quer roubar?' : 'Errou! Alguém quer roubar?';
+  $('#steal-sub').textContent = 'Quem acertar ganha 50 pontos. Qual time quer tentar?';
+  $('#steal-pick').hidden = false; $('#steal-ready').hidden = true;
+  const box = $('#steal-teams'); box.textContent = '';
+  G.teams.forEach((t, i) => {
+    if (i === G.turn) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'teambtn'; b.dataset.i = i;
+    b.style.setProperty('--tc', 'var(--t' + t.color + ')'); b.textContent = t.name; box.append(b);
+  });
+  $('#panel-steal').scrollIntoView({ block: 'nearest' });
+}
+$('#steal-teams').addEventListener('click', e => {
+  const b = e.target.closest('.teambtn'); if (!b) return;
+  const i = Number(b.dataset.i), t = G.teams[i];
+  G.stealTeam = i; G.phase = 'steal-ready'; updateBoard();
+  $('#steal-pick').hidden = true; $('#steal-ready').hidden = false;
+  $('#steal-title').textContent = 'Roubo do time ' + t.name;
+  $('#steal-who').textContent = 'Escolham quem responde. Vocês têm 10 segundos.';
+  fillRep($('#steal-rep'), i);
+});
+$('#btn-nosteal').addEventListener('click', () => reveal({ ok: false, kind: 'skip' }));
+$('#btn-stealgo').addEventListener('click', () => {
+  const t = G.teams[G.stealTeam];
+  G.phase = 'steal-play'; $('#panel-steal').hidden = true; $('#qcard').classList.add('stealing');
+  $('#q-turn').innerHTML = 'Roubo: <b>' + esc(t.name) + '</b> · responde ' + esc(t.members[t.rep]);
+  $$('.opt').forEach((b, k) => { b.disabled = G.pickedWrong.has(k) || b.classList.contains('gone'); });
+  sfx('go'); updateBoard();
+  startTimer(10, () => { lockOpts(); sfx('bad'); reveal({ ok: false, steal: true, kind: 'time' }); });
+});
+
+function reveal(res) {
+  stopTimer(); G.phase = 'reveal';
+  const qn = G.qs[G.i];
+  $$('.opt').forEach((b, k) => { b.disabled = true; if (G.opts[k].ok) b.classList.add('correct'); });
+  $('#panel-steal').hidden = true; $('#qcard').classList.remove('stealing');
+  const fb = $('#feedback'); fb.hidden = false; fb.className = 'panel fb ' + (res.ok ? 'good' : 'bad');
+  const correct = G.opts.find(o => o.ok).t;
+  if (res.ok && res.steal) {
+    $('#fb-title').textContent = 'Roubou! +50 pontos';
+    $('#fb-sub').textContent = G.teams[res.team].name + ' roubou a pergunta.';
+  } else if (res.ok) {
+    $('#fb-title').textContent = 'Correto! +' + res.pts + ' pontos';
+    $('#fb-sub').textContent = G.teams[res.team].name + ' marcou 100 pontos + ' + (res.pts - 100) + ' de bônus de velocidade.';
+  } else {
+    $('#fb-title').textContent = res.kind === 'time' ? 'Tempo esgotado!' : 'Não foi dessa vez.';
+    $('#fb-sub').textContent = 'A resposta certa é “' + correct + '”.';
+  }
+  $('#fb-exp').innerHTML = '<b>Dica:</b> ' + esc(qn.e);
+  $('#btn-next').textContent = G.i + 1 >= G.qs.length ? 'Ver resultado' : 'Próxima pergunta';
+  updateBoard();
+  fb.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+  $('#btn-next').focus({ preventScroll: true });
+}
+
+$('#opts').addEventListener('click', e => {
+  const b = e.target.closest('.opt'); if (!b || b.disabled) return;
+  answer(Number(b.dataset.k));
+});
+$('#btn-show').addEventListener('click', () => { sfx('go'); showQuestion(); });
+$('#btn-next').addEventListener('click', () => {
+  if (G.i + 1 >= G.qs.length) { endGame(); return; }
+  G.i++; showTurn();
+});
+$('#btn-5050').addEventListener('click', () => {
+  if (G.phase !== 'question') return;
+  const t = G.teams[G.turn]; if (!t.lifeline) return;
+  const wrong = G.opts.map((o, k) => ({ o, k })).filter(x => !x.o.ok);
+  shuffle(wrong).slice(0, 2).forEach(x => { const b = $$('.opt')[x.k]; b.classList.add('gone'); b.disabled = true; });
+  t.lifeline = false; G.used5050 = true; $('#btn-5050').hidden = true; sfx('go'); updateBoard();
+});
+document.addEventListener('keydown', e => {
+  if (!G || $('#screen-game').hidden) return;
+  if (e.target.matches && e.target.matches('input,select,textarea')) return;
+  if (G.phase !== 'question' && G.phase !== 'steal-play') return;
+  const map = { a: 0, b: 1, c: 2, d: 3, '1': 0, '2': 1, '3': 2, '4': 3 };
+  const k = map[e.key.toLowerCase()]; if (k === undefined) return;
+  const b = $$('.opt')[k];
+  if (b && !b.disabled && !b.classList.contains('gone')) b.click();
+});
+
+$('#btn-mute').addEventListener('click', e => {
+  muted = !muted; e.currentTarget.setAttribute('aria-pressed', String(muted));
+  e.currentTarget.textContent = muted ? 'Som: desligado' : 'Som: ligado';
+});
+let quitTimer = null;
+$('#btn-quit').addEventListener('click', e => {
+  const b = e.currentTarget;
+  if (b.dataset.armed === '1') { clearTimeout(quitTimer); b.dataset.armed = ''; b.textContent = 'Encerrar jogo'; b.classList.remove('danger'); endGame(); return; }
+  b.dataset.armed = '1'; b.textContent = 'Toque de novo para encerrar'; b.classList.add('danger');
+  quitTimer = setTimeout(() => { b.dataset.armed = ''; b.textContent = 'Encerrar jogo'; b.classList.remove('danger'); }, 3000);
+});
+
+/* ================= RESULTS ================= */
+function endGame() {
+  stopTimer(); G.phase = 'end';
+  const ts = G.teams.map((t, i) => Object.assign({ i }, t)).sort((a, b) => b.score - a.score);
+  let rank = 0;
+  ts.forEach((t, k) => { if (k === 0 || t.score !== ts[k - 1].score) rank = k + 1; t.rank = rank; });
+  const winners = ts.filter(t => t.rank === 1);
+  const top = ts[0].score;
+  show('results');
+  if (top === 0) {
+    $('#res-title').textContent = 'Ninguém pontuou';
+    $('#res-lead').textContent = 'Que tal tentar de novo?';
+  } else if (winners.length > 1) {
+    $('#res-title').textContent = 'Empate!';
+    $('#res-lead').textContent = winners.map(w => w.name).join(' e ') + ' com ' + top + ' pontos.';
+  } else {
+    $('#res-title').textContent = winners[0].name + ' venceu!';
+    $('#res-lead').textContent = 'Parabéns! ' + top + ' pontos.';
+  }
+  const order = { 1: [0], 2: [1, 0], 3: [1, 0, 2], 4: [1, 0, 2, 3] }[ts.length].map(k => ts[k]);
+  const pod = $('#podium'); pod.textContent = '';
+  const heights = { 1: 190, 2: 150, 3: 116, 4: 90 };
+  order.forEach(t => {
+    const col = document.createElement('div'); col.className = 'pcol'; col.style.setProperty('--tc', 'var(--t' + t.color + ')');
+    col.innerHTML = '<div class="pname">' + esc(t.name) + '</div><div class="pscore">' + t.score + '</div><div class="pblock" data-h="' + heights[t.rank] + '">' + t.rank + '</div>';
+    pod.append(col);
+  });
+  requestAnimationFrame(() => requestAnimationFrame(() => $$('.pblock').forEach(b => { b.style.height = b.dataset.h + 'px'; })));
+  const rows = $('#res-rows'); rows.textContent = '';
+  ts.forEach(t => {
+    const tr = document.createElement('tr'); tr.style.setProperty('--tc', 'var(--t' + t.color + ')');
+    tr.innerHTML = '<td><span class="dot"></span>' + esc(t.name) + '</td><td class="num">' + t.score + '</td><td class="num">' + t.correct + '</td><td class="num">' + t.steals + '</td>';
+    rows.append(tr);
+  });
+  if (top > 0) { sfx('win'); confetti(); }
+}
+$('#btn-again').addEventListener('click', newGame);
+$('#btn-reset').addEventListener('click', () => { show('setup'); });
+
+function confetti() {
+  if (reduceMotion) return;
+  const cv = $('#confetti'), ctx = cv.getContext('2d'), dpr = window.devicePixelRatio || 1;
+  const W = cv.width = Math.round(innerWidth * dpr), H = cv.height = Math.round(innerHeight * dpr);
+  cv.hidden = false;
+  const cols = ['#ffe27a', '#1fa7e6', '#f47c20', '#27c26a', '#a77bff', '#ffffff'];
+  const P = Array.from({ length: 160 }, () => ({
+    x: Math.random() * W, y: -Math.random() * H * 0.6, r: (4 + Math.random() * 6) * dpr,
+    c: cols[(Math.random() * cols.length) | 0], vy: (2 + Math.random() * 3) * dpr, vx: (Math.random() - 0.5) * 3 * dpr,
+    a: Math.random() * 6, va: (Math.random() - 0.5) * 0.3
+  }));
+  const end = performance.now() + 4500;
+  (function frame(now) {
+    ctx.clearRect(0, 0, W, H);
+    P.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.a += p.va;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c;
+      ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); ctx.restore();
+    });
+    if (now < end) requestAnimationFrame(frame); else { ctx.clearRect(0, 0, W, H); cv.hidden = true; }
+  })(performance.now());
+}
+
+/* ================= INIT ================= */
+syncSeg(); renderTeams();
+})();
+</script>
+
+</body>
+</html>
